@@ -1,0 +1,245 @@
+---
+title: "DAC 2022"
+author: "TA session - Arthur Cheib"
+date: "2/17/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+### Where does this lecture/code comes from?
+This amazing code was provided by Thomas Lin Pedersen. He prepared this code for his famous workshop on ggplot2 (https://www.youtube.com/watch?v=h29g21z0a68&t=0s)
+
+```{r}
+### Schedule for today
+
+## 1) Go through some of the "layers" of ggplot2
+## 2) Graph exercises with our own ideas
+```
+
+
+```{r, echo=FALSE}
+# Load standard packages
+library(tidyverse)
+```
+
+## Introduction
+We will look at the basic ggplot2 use using the faithful dataset, giving 
+information on the eruption pattern of the Old Faithful geyser in Yellowstone
+National Park.
+
+## What is the grammar of graphics?
+
+Graphics are all made of 8 constituents:
+1. Theme: everything that is visual but that is not related to data (background colour, title, legend's title, etc.)
+
+2. Coordinates: defines the physical mapping of the aesthetics to the graph (everything related to position)
+
+3. Facets: Possibility of spling our plot area into different groups
+
+4. Geometries: how to interpret aesthetics as graphical representations - how you specify (lines, points, box-plot)
+
+5. Mapping: link data to graphical properties in the geometry (translates: this column is X, this column is colour)
+
+6. Data: grammar of graphics requires a tidy format (the core of ggplot2 and any graphic technique)
+
+```{r}
+data("faithful")
+
+faithful <- faithful %>% 
+  as_tibble()
+
+library(ggplot2)
+
+# Which dataset to plot (is the "data =" argument)
+ggplot(data = faithful, 
+       
+       ## Which columns to use for x and y
+       mapping = aes(x = eruptions, y = waiting)) + 
+  
+       ## How do we want R to draw our plot
+  geom_point()
+
+
+ggplot(data = faithful,
+       mapping = aes(x = eruptions, y = waiting)) +
+  geom_point()
+
+## The plus ("+") sign is used to combine ggplot2 elements (is the ggplot2 version of the pipe operator)
+
+# Data and mapping can be given both as global (in ggplot()) or per layer
+ggplot(faithful) + 
+  geom_point(mapping = aes(x = eruptions, y = waiting))
+
+
+```
+
+If an aesthetic is linked to data it is put into `aes()`
+
+```{r}
+ggplot(faithful) + 
+  # Mapping colour
+  geom_point(aes(x = eruptions, y = waiting, colour = eruptions))
+
+ggplot(faithful) + 
+  # Mapping colour with a condition (R will understand that you want him to graph no the column anymore, but the condition)
+  geom_point(aes(x = eruptions, y = waiting, colour = eruptions < 3))
+```
+
+If you simple want to set it to a value, put it outside of `aes()`
+
+```{r}
+## There is a different thing we can do with colour: instead of mapping the colour to a column, we want to set the colour
+ggplot(faithful) + 
+  geom_point(aes(x = eruptions, y = waiting),
+## It needs to be outside our aesthetics (the legend its gone = no association between cols and colors anymore)
+             colour = 'steelblue')
+```
+
+Some geoms only need a single mapping and will calculate the rest for you
+
+```{r}
+ggplot(faithful) + 
+  geom_histogram(aes(x = eruptions))
+
+## Geoms are drawn in the order they are added. The point layer is thus drawn on
+## top of the histogram in the example below.
+
+ggplot(faithful) + 
+  geom_histogram(aes(x = eruptions)) +
+  geom_point(aes(x = eruptions, y = waiting))
+
+```
+
+#### Exercise
+
+Modify the code below to make the points larger squares and slightly transparent.
+See `?geom_point` for more information on the point layer.
+
+```{r}
+## Shape as square: square = 0
+ggplot(faithful) + 
+  geom_point(aes(x = eruptions,
+                 y = waiting),
+             alpha = 0.85,
+             shape = 19)
+
+```
+
+Hint 1: transparency is controlled with `alpha`, and shape with `shape`
+Hint 2: remember the difference between mapping and setting aesthetics
+
+* * *
+
+Colour the two distributions in the histogram with different colours
+
+```{r}
+ggplot(faithful) + 
+  geom_histogram(aes(x = eruptions, fill = eruptions < 3.1))
+```
+
+Hint 1: For polygons you can map two different colour-like aesthetics: `colour` 
+(the colour of the stroke) and `fill` (the fill colour)
+
+Fill is a different way of ggplot2 coloring (colour of the interior).
+
+* * *
+
+Colour the distributions in the histogram by whether `waiting` is above or below 
+`60`. What happens?
+
+```{r}
+ggplot(faithful) + 
+  geom_histogram(aes(x = eruptions))
+```
+
+Change the plot above by setting `position = 'dodge'` in `geom_histogram()` 
+(while keeping the colouring by `waiting`). What do `position` control? 
+
+* * *
+
+Add a line that separates the two point distributions. See `?geom_abline` for 
+how to draw straight lines from a slope and intercept.
+
+```{r}
+ggplot(faithful) + 
+  geom_point(aes(x = eruptions, y = waiting))
+```
+
+### Scales
+Scales define how the mapping you specify inside `aes()` should happen. All 
+mappings have an associated scale even if not specified.
+
+Preparing the data
+
+```{r}
+library(gapminder)
+gapminder2 <- gapminder %>% 
+  group_by(continent, year) %>% 
+  summarize(avg_lifeExp = mean(lifeExp),
+            avg_pop = mean(pop))
+```
+
+
+```{r}
+ggplot(gapminder2) + 
+  geom_point(aes(x = year, y = avg_lifeExp, colour = continent))
+```
+
+Positional mappings (x and y) also have associated scales.
+
+```{r}
+ggplot(gapminder2) + 
+  geom_point(aes(x = year, y = avg_lifeExp, colour = continent)) +
+  scale_y_continuous(breaks = c(20,30,40,50,60,70,80, 120), limits = c(20,120))
+```
+
+### Facets
+
+The facet defines how data is split among panels. The default facet 
+(`facet_null()`) puts all the data in a single panel, while `facet_wrap()` allows you to specify different types of small multiples grids.
+
+```{r}
+ggplot(gapminder2) + 
+  geom_point(aes(x = year, y = avg_lifeExp, colour = continent)) +
+  facet_wrap(~continent)
+
+```
+
+### Theme
+Theming defines the feel and look of your final visualisation and is something
+you will normally defer to the final polishing of the plot. It is very easy to 
+change looks with a prebuild theme
+
+```{r}
+ggplot(gapminder2) + 
+  geom_point(aes(x = year, y = avg_lifeExp, colour = continent)) +
+  theme_minimal() + 
+  labs(title = "Gapminder dataset",
+       subtitle = "Subtitle",
+       y = "Y-axis title",
+       fill = "New Legend Name",
+       x = "X-axis title",
+       caption = "Caption") +
+  theme(legend.position = "bottom",
+        plot.title = element_text(size = 18))
+```
+
+Exercise
+
+Let's try something with ggplot2 x gapminder dataset!
+
+```{r}
+## gdpPercap vs lifeExp seems useful
+gapminder %>% 
+  filter(year %in% c(1952, 2007) & gdpPercap < 100000) %>% 
+  ggplot() + 
+  geom_point(aes(x = lifeExp, y = gdpPercap, colour = continent, size = pop)) +
+  facet_wrap(~year)
+
+  
+
+```
+
